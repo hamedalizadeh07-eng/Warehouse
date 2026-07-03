@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه انبار پالایشگاه</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vazirmatn/33.003/Vazirmatn-font-face.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<style>
+  :root{
+    --bg:#10151b;
+    --panel:#171e26;
+    --panel2:#1f2833;
+    --line:#2b3644;
+    --accent:#ff7a1a;
+    --accent-dim:#8a4318;
+    --hazard:#ffd23f;
+    --text:#e8edf3;
+    --text-dim:#8b98a7;
+    --ok:#33c17a;
+    --bad:#ff5c5c;
+    --mono:'Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Vazirmatn',Tahoma,sans-serif;}
+  body{padding-bottom:70px;min-height:100vh;}
+  .topbar{
+    background:linear-gradient(180deg,#141a21,#10151b);
+    border-bottom:3px solid var(--accent);
+    padding:14px 16px 12px;
+    position:sticky;top:0;z-index:20;
+  }
+  .topbar .brand{display:flex;align-items:center;gap:10px;}
+  .topbar .tag{
+    width:34px;height:34px;border-radius:6px;
+    background:repeating-linear-gradient(45deg, var(--hazard), var(--hazard) 6px, #1a1a1a 6px, #1a1a1a 12px);
+    flex:none;
+  }
+  .topbar h1{font-size:16px;margin:0;letter-spacing:.3px;}
+  .topbar p{margin:2px 0 0;font-size:11px;color:var(--text-dim);font-family:var(--mono);letter-spacing:1px;}
+
+  .tabs{display:flex;overflow-x:auto;gap:6px;padding:10px 12px 0;background:var(--bg);position:sticky;top:64px;z-index:19;border-bottom:1px solid var(--line);}
+  .tab-btn{
+    flex:none;padding:9px 14px;border:1px solid var(--line);border-bottom:none;
+    background:var(--panel);color:var(--text-dim);border-radius:8px 8px 0 0;
+    font-family:inherit;font-size:13px;cursor:pointer;
+  }
+  .tab-btn.active{background:var(--panel2);color:var(--accent);border-color:var(--accent-dim);font-weight:700;}
+
+  .view{display:none;padding:16px 14px 24px;max-width:720px;margin:0 auto;}
+  .view.active{display:block;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--accent);display:flex;align-items:center;gap:6px;}
+  .card h2 .num{font-family:var(--mono);color:var(--text-dim);font-size:11px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+  .stat .v{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent);}
+  .stat.warn .v{color:var(--hazard);}
+  .stat .l{font-size:11px;color:var(--text-dim);margin-top:4px;}
+
+  .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row .name{font-size:13px;}
+  .row .sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);}
+  .badge{font-size:10px;padding:3px 8px;border-radius:20px;font-family:var(--mono);}
+  .badge.in{background:#123322;color:var(--ok);}
+  .badge.out{background:#3a1616;color:var(--bad);}
+  .badge.pending{background:#3a2f10;color:var(--hazard);}
+  .badge.ordered{background:#12293a;color:#5cb3ff;}
+  .badge.received{background:#123322;color:var(--ok);}
+
+  input,select,textarea,button{font-family:inherit;font-size:14px;}
+  input,select,textarea{
+    width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);
+    padding:10px;border-radius:7px;margin-bottom:10px;
+  }
+  label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;}
+  .btn{
+    background:var(--accent);color:#1a0f00;border:none;border-radius:7px;
+    padding:11px 14px;font-weight:700;cursor:pointer;width:100%;
+  }
+  .btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line);}
+  .btn.small{width:auto;padding:6px 10px;font-size:12px;}
+  .btn.danger{background:var(--bad);color:#fff;}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row .btn{width:auto;flex:1;}
+
+  .item-tag{
+    display:flex;gap:12px;align-items:center;background:var(--panel2);
+    border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;position:relative;
+  }
+  .item-tag.low{border-color:var(--bad);}
+  .item-tag .qrbox{width:54px;height:54px;background:#fff;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .item-tag .info{flex:1;min-width:0;}
+  .item-tag .info .nm{font-size:13px;font-weight:700;}
+  .item-tag .info .cd{font-size:11px;color:var(--text-dim);font-family:var(--mono);}
+  .item-tag .qty{font-family:var(--mono);font-size:18px;font-weight:700;text-align:left;}
+  .item-tag .qty small{display:block;font-size:10px;color:var(--text-dim);font-weight:400;}
+
+  .empty{text-align:center;padding:30px 10px;color:var(--text-dim);font-size:13px;}
+
+  .modal-bg{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;
+    align-items:flex-end;justify-content:center;
+  }
+  .modal-bg.active{display:flex;}
+  .modal{background:var(--panel);border-top:3px solid var(--accent);border-radius:16px 16px 0 0;
+    padding:18px 16px 24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
+  .modal h3{margin:0 0 14px;font-size:15px;color:var(--accent);}
+  .close-x{position:absolute;left:14px;top:12px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;}
+
+  #video{width:100%;border-radius:10px;background:#000;max-height:280px;object-fit:cover;}
+  .scan-result{background:var(--panel2);border:1px solid var(--accent-dim);border-radius:10px;padding:12px;margin-top:12px;}
+
+  .fab{
+    position:fixed;bottom:16px;left:16px;background:var(--accent);color:#1a0f00;
+    width:52px;height:52px;border-radius:50%;border:none;font-size:26px;font-weight:700;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer;z-index:15;
+  }
+  .print-tag{
+    display:none;
+  }
+  @media print{
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{position:absolute;top:0;right:0;left:0;display:block !important;}
+    .label{
+      display:inline-block;width:45%;margin:2%;border:1px dashed #333;border-radius:8px;
+      padding:10px;text-align:center;page-break-inside:avoid;
+    }
+    .label .hole{width:10px;height:10px;border:1px solid #333;border-radius:50%;margin:0 auto 6px;}
+  }
+  .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .helper{font-size:11px;color:var(--text-dim);line-height:1.7;margin-top:6px;}
+  ::placeholder{color:#55606e;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="tag"></div>
+    <div>
+      <h1>سامانه کنترل موجودی انبار</h1>
+      <p>WAREHOUSE // REFINERY STOCK CONTROL</p>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="dashboard">داشبورد</button>
+  <button class="tab-btn" data-tab="items">کالاها</button>
+  <button class="tab-btn" data-tab="scan">اسکن ورود/خروج</button>
+  <button class="tab-btn" data-tab="reports">گزارشات</button>
+  <button class="tab-btn" data-tab="orders">سفارشات</button>
+</div>
+
+<!-- DASHBOARD -->
+<div class="view active" id="view-dashboard">
+  <div class="grid2">
+    <div class="stat"><div class="v" id="statItems">0</div><div class="l">تعداد اقلام</div></div>
+    <div class="stat warn"><div class="v" id="statLow">0</div><div class="l">کمتر از حد مجاز</div></div>
+    <div class="stat"><div class="v" id="statToday">0</div><div class="l">تراکنش امروز</div></div>
+    <div class="stat warn"><div class="v" id="statPending">0</div><div class="l">سفارش در انتظار</div></div>
+  </div>
+
+  <div class="card">
+    <h2>⚠ کالاهای زیر حد مجاز</h2>
+    <div id="lowStockList"><div class="empty">موردی نیست</div></div>
+  </div>
+
+  <div class="card">
+    <h2>آخرین تراکنش‌ها</h2>
+    <div id="recentTx"><div class="empty">تراکنشی ثبت نشده</div></div>
+  </div>
+</div>
+
+<!-- ITEMS -->
+<div class="view" id="view-items">
+  <div class="card">
+    <button class="btn" onclick="openItemModal()">+ افزودن کالای جدید</button>
+  </div>
+  <div id="itemsList"></div>
+  <div class="card" style="margin-top:14px;">
+    <button class="btn secondary" onclick="printAllLabels()">🖨 چاپ همه برچسب‌های QR</button>
+  </div>
+</div>
+
+<!-- SCAN -->
+<div class="view" id="view-scan">
+  <div class="card">
+    <h2>اسکن با دوربین</h2>
+    <video id="video" playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div class="btn-row">
+      <button class="btn" id="startScanBtn" onclick="startScan()">📷 شروع اسکن دوربین</button>
+      <button class="btn secondary" id="stopScanBtn" onclick="stopScan()" style="display:none;">توقف</button>
+    </div>
+    <div class="helper">دوربین را روی QR کد کالا بگیرید. در صورت عدم دسترسی به دوربین، از ورود دستی کد استفاده کنید.</div>
+  </div>
+
+  <div class="card">
+    <h2>ورود دستی کد کالا</h2>
+    <input type="text" id="manualCode" placeholder="مثال: RF-1001" style="font-family:var(--mono);">
+    <button class="btn secondary" onclick="lookupManual()">جستجوی کالا</button>
+  </div>
+
+  <div id="scanResultBox"></div>
+</div>
+
+<!-- REPORTS -->
+<div class="view" id="view-reports">
+  <div class="card">
+    <h2>فیلتر گزارش</h2>
+    <div class="filter-row">
+      <div><label>از تاریخ</label><input type="date" id="fromDate"></div>
+      <div><label>تا تاریخ</label><input type="date" id="toDate"></div>
+    </div>
+    <label>کالا</label>
+    <select id="filterItem"><option value="">همه کالاها</option></select>
+    <label>نوع تراکنش</label>
+    <select id="filterType">
+      <option value="">همه</option>
+      <option value="in">ورود</option>
+      <option value="out">خروج</option>
+    </select>
+    <div class="btn-row">
+      <button class="btn" onclick="renderReport()">اعمال فیلتر</button>
+      <button class="btn secondary" onclick="exportCSV()">خروجی CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>نتایج <span class="num" id="reportCount"></span></h2>
+    <div id="reportList"><div class="empty">داده‌ای برای نمایش نیست</div></div>
+  </div>
+</div>
+
+<!-- ORDERS -->
+<div class="view" id="view-orders">
+  <div class="card">
+    <h2>پیشنهاد سفارش (زیر حد مجاز)</h2>
+    <div id="suggestOrders"><div class="empty">پیشنهادی نیست</div></div>
+  </div>
+  <div class="card">
+    <button class="btn" onclick="openOrderModal()">+ ثبت سفارش جدید</button>
+  </div>
+  <div class="card">
+    <h2>لیست سفارشات</h2>
+    <div id="ordersList"><div class="empty">سفارشی ثبت نشده</div></div>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="modal-bg" id="itemModalBg">
+  <div class="modal" style="position:relative;">
+    <button class="close-x" onclick="closeModal('itemModalBg')">×</button>
+    <h3 id="itemModalTitle">افزودن کالا</h3>
+    <input type="hidden" id="itemId">
+    <label>کد کالا (منحصربه‌فرد)</label>
+    <input type="text" id="itemCode" style="font-family:var(--mono);" placeholder="RF-1001">
+    <label>نام کالا</label>
+    <input type="text" id="itemName" placeholder="مثال: واشر فلنج ۴ اینچ">
+    <label>دسته‌بندی</label>
+    <input type="text" id="itemCategory" placeholder="مثال: قطعات یدکی">
+    <label>واحد شمارش</label>
+    <select id="itemUnit">
+      <option>عدد</option><option>کیلوگرم</option><option>لیتر</option>
+      <option>متر</option><option>بشکه</option><option>جعبه</option>
+    </select>
+    <label>موجودی فعلی</label>
+    <input type="number" id="itemQty" value="0">
+    <label>حد مجاز (حداقل موجودی)</label>
+    <input type="number" id="itemMin" value="0">
+    <label>محل نگهداری (رک/قفسه)</label>
+    <input type="text" id="itemLocation" placeholder="مثال: سالن ۲ - رک B3">
+    <button class="btn" onclick="saveItem()">ذخیره کالا</button>
+  </div>
+</div>
+
+<!-- ORDER MODAL -->
+<div class="modal-bg" id="orderModalBg">
+  <div class="modal" style="position:relative;">
+    <button class="close-x" onclick="closeModal('orderModalBg')">×</button>
+    <h3>ثبت سفارش جدید</h3>
+    <label>کالا</label>
+    <select id="orderItem"></select>
+    <label>مقدار سفارش</label>
+    <input type="number" id="orderQty" value="1">
+    <label>توضیحات (اختیاری)</label>
+    <textarea id="orderNote" rows="2" placeholder="مثال: تامین‌کننده / اولویت"></textarea>
+    <button class="btn" onclick="saveOrder()">ثبت سفارش</button>
+  </div>
+</div>
+
+<!-- LABEL PRINT AREA -->
+<div id="printArea" class="print-tag"></div>
+
+<script>
+let DATA = { items: [], transactions: [], orders: [] };
+let scanning = false;
+let stream = null;
+let foundItem = null;
+
+const STORAGE_KEY = 'warehouse-data';
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    if(res && res.value){ DATA = JSON.parse(res.value); }
+  }catch(e){
+    // key doesn't exist yet, initialize
+    await persist();
+  }
+  renderAll();
+}
+
+async function persist(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), true);
+  }catch(e){ console.error('storage error', e); }
+}
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function nowISO(){ return new Date().toISOString(); }
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('fa-IR')+' '+d.toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'scan'){ stopScan(); }
+    renderAll();
+  });
+});
+
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+
+// ---------- RENDER ----------
+function renderAll(){
+  renderDashboard();
+  renderItems();
+  renderFilters();
+  renderReport();
+  renderOrders();
+}
+
+function renderDashboard(){
+  document.getElementById('statItems').textContent = DATA.items.length;
+  const low = DATA.items.filter(i=>Number(i.quantity) <= Number(i.minStock));
+  document.getElementById('statLow').textContent = low.length;
+  const today = new Date().toDateString();
+  const todayTx = DATA.transactions.filter(t=> new Date(t.date).toDateString() === today);
+  document.getElementById('statToday').textContent = todayTx.length;
+  const pending = DATA.orders.filter(o=>o.status!=='received').length;
+  document.getElementById('statPending').textContent = pending;
+
+  const lowBox = document.getElementById('lowStockList');
+  lowBox.innerHTML = low.length ? low.map(i=>`
+    <div class="row">
+      <div><div class="name">${esc(i.name)}</div><div class="sub">${esc(i.code)} · ${esc(i.location||'-')}</div></div>
+      <div class="badge out">${i.quantity} / حد ${i.minStock} ${esc(i.unit)}</div>
+    </div>`).join('') : '<div class="empty">موردی نیست</div>';
+
+  const recent = [...DATA.transactions].sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,5);
+  const rBox = document.getElementById('recentTx');
+  rBox.innerHTML = recent.length ? recent.map(t=>{
+    const it = DATA.items.find(i=>i.id===t.itemId);
+    return `<div class="row">
+      <div><div class="name">${esc(it?it.name:'کالای حذف‌شده')}</div><div class="sub">${fmtDate(t.date)}</div></div>
+      <span class="badge ${t.type}">${t.type==='in'?'ورود':'خروج'} ${t.qty}</span>
+    </div>`;
+  }).join('') : '<div class="empty">تراکنشی ثبت نشده</div>';
+}
+
+function renderItems(){
+  const box = document.getElementById('itemsList');
+  if(!DATA.items.length){ box.innerHTML = '<div class="empty">هنوز کالایی ثبت نشده</div>'; return; }
+  box.innerHTML = '';
+  DATA.items.forEach(i=>{
+    const low = Number(i.quantity) <= Number(i.minStock);
+    const div = document.createElement('div');
+    div.className = 'item-tag' + (low?' low':'');
+    div.innerHTML = `
+      <div class="qrbox" id="qr-${i.id}"></div>
+      <div class="info">
+        <div class="nm">${esc(i.name)}</div>
+        <div class="cd">${esc(i.code)} · ${esc(i.category||'-')}</div>
+        <div class="cd">${esc(i.location||'-')}</div>
+      </div>
+      <div class="qty">${i.quantity}<small>${esc(i.unit)}</small></div>
+    `;
+    div.addEventListener('click', ()=> openItemModal(i.id));
+    box.appendChild(div);
+    new QRCode(document.getElementById('qr-'+i.id), {text:i.code, width:48, height:48, correctLevel: QRCode.CorrectLevel.M});
+  });
+}
+
+function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+// ---------- ITEMS CRUD ----------
+function openItemModal(id){
+  document.getElementById('itemModalTitle').textContent = id ? 'ویرایش کالا' : 'افزودن کالا';
+  document.getElementById('itemId').value = id || '';
+  if(id){
+    const i = DATA.items.find(x=>x.id===id);
+    document.getElementById('itemCode').value = i.code;
+    document.getElementById('itemName').value = i.name;
+    document.getElementById('itemCategory').value = i.category||'';
+    document.getElementById('itemUnit').value = i.unit;
+    document.getElementById('itemQty').value = i.quantity;
+    document.getElementById('itemMin').value = i.minStock;
+    document.getElementById('itemLocation').value = i.location||'';
+  } else {
+    ['itemCode','itemName','itemCategory','itemLocation'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('itemQty').value = 0;
+    document.getElementById('itemMin').value = 0;
+    document.getElementById('itemUnit').value = 'عدد';
+  }
+  document.getElementById('itemModalBg').classList.add('active');
+}
+
+async function saveItem(){
+  const id = document.getElementById('itemId').value;
+  const code = document.getElementById('itemCode').value.trim();
+  const name = document.getElementById('itemName').value.trim();
+  if(!code || !name){ alert('کد و نام کالا الزامی است'); return; }
+  const dup = DATA.items.find(i=>i.code===code && i.id!==id);
+  if(dup){ alert('این کد کالا قبلاً ثبت شده است'); return; }
+
+  const payload = {
+    code, name,
+    category: document.getElementById('itemCategory').value.trim(),
+    unit: document.getElementById('itemUnit').value,
+    quantity: Number(document.getElementById('itemQty').value)||0,
+    minStock: Number(document.getElementById('itemMin').value)||0,
+    location: document.getElementById('itemLocation').value.trim(),
+  };
+  if(id){
+    const idx = DATA.items.findIndex(i=>i.id===id);
+    DATA.items[idx] = {...DATA.items[idx], ...payload};
+  } else {
+    DATA.items.push({id: uid(), ...payload, createdAt: nowISO()});
+  }
+  await persist();
+  closeModal('itemModalBg');
+  renderAll();
+}
+
+// ---------- QR PRINTING ----------
+function printAllLabels(){
+  const area = document.getElementById('printArea');
+  area.innerHTML = DATA.items.map(i=>`
+    <div class="label">
+      <div class="hole"></div>
+      <div id="pqr-${i.id}"></div>
+      <div style="font-weight:bold;margin-top:6px;">${esc(i.name)}</div>
+      <div style="font-family:monospace;font-size:12px;">${esc(i.code)}</div>
+      <div style="font-size:11px;">${esc(i.location||'')}</div>
+    </div>
+  `).join('');
+  area.style.display = 'block';
+  setTimeout(()=>{
+    DATA.items.forEach(i=>{
+      document.getElementById('pqr-'+i.id).innerHTML='';
+      new QRCode(document.getElementById('pqr-'+i.id), {text:i.code, width:100, height:100, correctLevel: QRCode.CorrectLevel.M});
+    });
+    setTimeout(()=>{ window.print(); area.style.display='none'; }, 300);
+  }, 50);
+}
+
+// ---------- SCANNING ----------
+async function startScan(){
+  const video = document.getElementById('video');
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  }catch(e){
+    alert('دسترسی به دوربین امکان‌پذیر نشد. از ورود دستی کد استفاده کنید.');
+    return;
+  }
+  video.srcObject = stream;
+  video.style.display='block';
+  await video.play();
+  document.getElementById('startScanBtn').style.display='none';
+  document.getElementById('stopScanBtn').style.display='block';
+  scanning = true;
+  scanLoop();
+}
+
+function stopScan(){
+  scanning = false;
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  document.getElementById('video').style.display='none';
+  document.getElementById('startScanBtn').style.display='block';
+  document.getElementById('stopScanBtn').style.display='none';
+}
+
+function scanLoop(){
+  if(!scanning) return;
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code = jsQR(imgData.data, imgData.width, imgData.height);
+    if(code && code.data){
+      stopScan();
+      lookupCode(code.data);
+      return;
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+function lookupManual(){
+  const v = document.getElementById('manualCode').value.trim();
+  if(!v){ return; }
+  lookupCode(v);
+}
+
+function lookupCode(code){
+  const item = DATA.items.find(i=>i.code===code);
+  const box = document.getElementById('scanResultBox');
+  if(!item){
+    box.innerHTML = `<div class="scan-result"><div class="name">کالایی با کد «${esc(code)}» یافت نشد.</div></div>`;
+    return;
+  }
+  foundItem = item;
+  box.innerHTML = `
+    <div class="scan-result">
+      <div class="name" style="font-size:15px;font-weight:700;">${esc(item.name)}</div>
+      <div class="sub">${esc(item.code)} · موجودی فعلی: ${item.quantity} ${esc(item.unit)}</div>
+      <label style="margin-top:10px;">نوع تراکنش</label>
+      <select id="txType">
+        <option value="in">ورود به انبار (+)</option>
+        <option value="out">خروج از انبار (-)</option>
+      </select>
+      <label>مقدار</label>
+      <input type="number" id="txQty" value="1" min="1">
+      <label>توضیحات (اختیاری)</label>
+      <input type="text" id="txNote" placeholder="مثال: تحویل به واحد تعمیرات">
+      <button class="btn" onclick="confirmTx()">ثبت تراکنش</button>
+    </div>
+  `;
+}
+
+async function confirmTx(){
+  if(!foundItem) return;
+  const type = document.getElementById('txType').value;
+  const qty = Number(document.getElementById('txQty').value);
+  const note = document.getElementById('txNote').value.trim();
+  if(!qty || qty<=0){ alert('مقدار نامعتبر است'); return; }
+
+  const idx = DATA.items.findIndex(i=>i.id===foundItem.id);
+  if(type==='out' && DATA.items[idx].quantity < qty){
+    if(!confirm('موجودی کافی نیست! موجودی منفی می‌شود. ادامه می‌دهید؟')) return;
+  }
+  DATA.items[idx].quantity = Number(DATA.items[idx].quantity) + (type==='in'? qty : -qty);
+  DATA.transactions.push({id:uid(), itemId: foundItem.id, type, qty, note, date: nowISO()});
+  await persist();
+  document.getElementById('scanResultBox').innerHTML = `<div class="scan-result">✔ تراکنش ثبت شد. موجودی جدید: <b>${DATA.items[idx].quantity}</b></div>`;
+  foundItem = null;
+  document.getElementById('manualCode').value='';
+  renderAll();
+}
+
+// ---------- REPORTS ----------
+function renderFilters(){
+  const sel = document.getElementById('filterItem');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">همه کالاها</option>' + DATA.items.map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.code)})</option>`).join('');
+  sel.value = cur;
+}
+
+function renderReport(){
+  const from = document.getElementById('fromDate').value;
+  const to = document.getElementById('toDate').value;
+  const itemId = document.getElementById('filterItem').value;
+  const type = document.getElementById('filterType').value;
+
+  let list = [...DATA.transactions];
+  if(from) list = list.filter(t=> new Date(t.date) >= new Date(from));
+  if(to) list = list.filter(t=> new Date(t.date) <= new Date(to+'T23:59:59'));
+  if(itemId) list = list.filter(t=> t.itemId === itemId);
+  if(type) list = list.filter(t=> t.type === type);
+  list.sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+  document.getElementById('reportCount').textContent = list.length + ' مورد';
+  const box = document.getElementById('reportList');
+  box.innerHTML = list.length ? list.map(t=>{
+    const it = DATA.items.find(i=>i.id===t.itemId);
+    return `<div class="row">
+      <div><div class="name">${esc(it?it.name:'کالای حذف‌شده')}</div><div class="sub">${fmtDate(t.date)}${t.note?' · '+esc(t.note):''}</div></div>
+      <span class="badge ${t.type}">${t.type==='in'?'ورود':'خروج'} ${t.qty}</span>
+    </div>`;
+  }).join('') : '<div class="empty">داده‌ای برای نمایش نیست</div>';
+}
+
+function exportCSV(){
+  let rows = [['تاریخ','کد کالا','نام کالا','نوع','مقدار','توضیحات']];
+  DATA.transactions.forEach(t=>{
+    const it = DATA.items.find(i=>i.id===t.itemId);
+    rows.push([fmtDate(t.date), it?it.code:'', it?it.name:'', t.type==='in'?'ورود':'خروج', t.qty, t.note||'']);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'گزارش-انبار.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- ORDERS ----------
+function openOrderModal(prefillId, prefillQty){
+  const sel = document.getElementById('orderItem');
+  sel.innerHTML = DATA.items.map(i=>`<option value="${i.id}">${esc(i.name)} (${esc(i.code)})</option>`).join('');
+  if(prefillId) sel.value = prefillId;
+  document.getElementById('orderQty').value = prefillQty || 1;
+  document.getElementById('orderNote').value = '';
+  document.getElementById('orderModalBg').classList.add('active');
+}
+
+async function saveOrder(){
+  const itemId = document.getElementById('orderItem').value;
+  const qty = Number(document.getElementById('orderQty').value);
+  const note = document.getElementById('orderNote').value.trim();
+  if(!itemId || !qty || qty<=0){ alert('مقدار سفارش نامعتبر است'); return; }
+  DATA.orders.push({id:uid(), itemId, qty, note, status:'pending', date: nowISO()});
+  await persist();
+  closeModal('orderModalBg');
+  renderAll();
+}
+
+async function advanceOrder(orderId){
+  const o = DATA.orders.find(x=>x.id===orderId);
+  if(!o) return;
+  if(o.status==='pending'){ o.status='ordered'; }
+  else if(o.status==='ordered'){
+    o.status='received';
+    const idx = DATA.items.findIndex(i=>i.id===o.itemId);
+    if(idx>-1){
+      DATA.items[idx].quantity = Number(DATA.items[idx].quantity) + Number(o.qty);
+      DATA.transactions.push({id:uid(), itemId:o.itemId, type:'in', qty:o.qty, note:'دریافت سفارش', date: nowISO()});
+    }
+  }
+  await persist();
+  renderAll();
+}
+
+function renderOrders(){
+  const low = DATA.items.filter(i=>Number(i.quantity) <= Number(i.minStock));
+  const openItemIds = new Set(DATA.orders.filter(o=>o.status!=='received').map(o=>o.itemId));
+  const suggest = low.filter(i=>!openItemIds.has(i.id));
+  const sBox = document.getElementById('suggestOrders');
+  sBox.innerHTML = suggest.length ? suggest.map(i=>`
+    <div class="row">
+      <div><div class="name">${esc(i.name)}</div><div class="sub">موجودی ${i.quantity} / حد ${i.minStock} ${esc(i.unit)}</div></div>
+      <button class="btn small" onclick="openOrderModal('${i.id}', ${Math.max(1, i.minStock - i.quantity)})">ثبت سفارش</button>
+    </div>`).join('') : '<div class="empty">پیشنهادی نیست</div>';
+
+  const list = [...DATA.orders].sort((a,b)=> new Date(b.date)-new Date(a.date));
+  const box = document.getElementById('ordersList');
+  const labels = {pending:'در انتظار', ordered:'سفارش داده شد', received:'دریافت شد'};
+  const nextLabel = {pending:'ثبت سفارش نزد تامین‌کننده', ordered:'تایید دریافت کالا'};
+  box.innerHTML = list.length ? list.map(o=>{
+    const it = DATA.items.find(i=>i.id===o.itemId);
+    return `<div class="row">
+      <div><div class="name">${esc(it?it.name:'کالای حذف‌شده')} × ${o.qty}</div><div class="sub">${fmtDate(o.date)}${o.note?' · '+esc(o.note):''}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        <span class="badge ${o.status}">${labels[o.status]}</span>
+        ${o.status!=='received' ? `<button class="btn small secondary" onclick="advanceOrder('${o.id}')">${nextLabel[o.status]}</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">سفارشی ثبت نشده</div>';
+}
+
+loadData();
+</script>
+</body>
+</html>
